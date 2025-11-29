@@ -55,5 +55,13 @@ import HotelBooking.*
   
     println(s"1. Country with the highest number of bookings: $topCountry")
     
+    // Question 2
+    val bestPriceHotel = bookings.minBy(_.bookingPrice).hotelName
+    val bestDiscountHotel = bookings.maxBy(_.discount).hotelName
+    val bestMarginHotel = bookings.minBy(_.profitMargin).hotelName
+
+    println("2. Most economical hotel options:")
+    println(s"   a. Best Booking Price: $bestPriceHotel")
+
   else
     println("No data found.")
