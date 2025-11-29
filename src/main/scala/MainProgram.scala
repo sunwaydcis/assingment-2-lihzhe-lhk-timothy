@@ -43,3 +43,17 @@ import HotelBooking.*
       case e: Exception =>
         println(s"Error reading file: ${e.getMessage}")
         List.empty[HotelBooking]
+
+  if bookings.nonEmpty then
+    // Question 1: Which country has the highest number of bookings?
+    val topCountry = bookings
+      .groupBy(x => x.destinationCountry)
+      .map { case (country, list) => (country, list.size) }
+      .maxBy(x => x._2)
+      //Extract the country name with the highest amount of bookings
+      ._1
+  
+    println(s"1. Country with the highest number of bookings: $topCountry")
+    
+  else
+    println("No data found.")
