@@ -13,12 +13,14 @@ import HotelBooking.*
       //val source = Source.fromResource("Hotel_Dataset.csv")
       val source = Source.fromResource("Hotel_Dataset.csv")(Codec("ISO-8859-1"))
 
-      // 1. Read lines into memory immediately
+      //Read lines and save them as vals
       val lines = source.getLines().drop(1).toList
 
+      //Close the source reading process for better memory management
       source.close()
 
-      // 2. Process the lines and return the result
+      //Process the lines to return the mapped list values using hotel booking class's constructor
+      //Properly assign and use the constructor according to the column values in the csv file
       lines.map { line =>
         val cols = line.split(",")
         // Note: Make sure your column indices match your CSV structure exactly
@@ -33,9 +35,11 @@ import HotelBooking.*
         HotelBooking(bookingId, destinationCountry, hotelName, bookingPrice, discount, profitMargin, noOfPeople)
       }
     catch
+      //Catch any file reading errors using IOException
       case _: java.io.IOException =>
         println("Problem reading the file.")
         List.empty[HotelBooking]
+      //Blanket catch for most other file access errors
       case e: Exception =>
         println(s"Error reading file: ${e.getMessage}")
         List.empty[HotelBooking]
