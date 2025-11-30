@@ -1,7 +1,11 @@
 import scala.io.Source
 //To use ISO codec instead of default utf8 for this specific csv
 import scala.io.Codec
-import HotelBooking.*
+//import ProgramClasses.HotelBooking
+
+//Function to print lines in spaces between questions
+def questionLineSpacing(): Unit =
+  println("-" * 100)
 
 // Main Program Function
 @main def runMainProgram(): Unit =
@@ -44,24 +48,38 @@ import HotelBooking.*
         println(s"Error reading file: ${e.getMessage}")
         List.empty[HotelBooking]
 
+
   if bookings.nonEmpty then
+    //spacing before questions
+    questionLineSpacing()
     // Question 1: Which country has the highest number of bookings?
-    val topCountry = bookings
+    val (topCountry, maxBookings) = bookings
       .groupBy(x => x.destinationCountry)
       .map { case (country, list) => (country, list.size) }
       .maxBy(x => x._2)
       //Extract the country name with the highest amount of bookings
-      ._1
-  
-    println(s"1. Country with the highest number of bookings: $topCountry")
-    
+
+    println(s"1. Country with the highest number of bookings: $topCountry (With $maxBookings total bookings)")
+
+    //spacing between questions
+    questionLineSpacing()
+
     // Question 2
-    val bestPriceHotel = bookings.minBy(_.bookingPrice).hotelName
-    val bestDiscountHotel = bookings.maxBy(_.discount).hotelName
-    val bestMarginHotel = bookings.minBy(_.profitMargin).hotelName
+    val bestPriceHotel = bookings.minBy(_.bookingPrice)
+    val (bestPriceHotelName, bestPriceHotelPrice) = (bestPriceHotel.hotelName, bestPriceHotel.bookingPrice)
+    val bestDiscountHotel = bookings.maxBy(_.discount)
+    val (bestDiscountHotelName, bestDiscountHotelDiscount) = (bestDiscountHotel.hotelName, bestDiscountHotel.discount)
+    val lowestMarginHotel = bookings.minBy(_.profitMargin)
+    val (lowestMarginHotelName, lowestMarginHotelMargin) = (lowestMarginHotel.hotelName, lowestMarginHotel.profitMargin)
 
-    println("2. Most economical hotel options:")
-    println(s"   a. Best Booking Price: $bestPriceHotel")
+    println("2. Most Economical Hotel Options")
+    println(f"   a. Best Booking Price: $bestPriceHotelName (With a booking price of SGD ${bestPriceHotelPrice}%.2f)")
+    println(f"   b. Best Discount: $bestDiscountHotelName (With a discount of ${bestDiscountHotelDiscount * 100}%.0f percent)")
+    println(s"   c. Best Profit Margin (Lowest): $lowestMarginHotelName (With a margin of $lowestMarginHotelMargin)")
 
+    //spacing between questions
+    questionLineSpacing()
+
+    
   else
     println("No data found.")

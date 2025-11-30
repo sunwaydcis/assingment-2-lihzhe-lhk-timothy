@@ -1,4 +1,4 @@
-package HotelBooking
+//package ProgramClasses
 
 case class HotelBooking(
                          bookingId : String,
