@@ -57,7 +57,7 @@ def questionLineSpacing(): Unit =
       .groupBy(x => x.destinationCountry)
       .map { case (country, list) => (country, list.size) }
       .maxBy(x => x._2)
-      //Extract the country name with the highest amount of bookings
+    //Extract the country name with the highest amount of bookings
 
     println(s"1. Country with the highest number of bookings: $topCountry (With $maxBookings total bookings)")
 
@@ -80,6 +80,18 @@ def questionLineSpacing(): Unit =
     //spacing between questions
     questionLineSpacing()
 
-    
+    // Question 3
+    val (mostProfitableHotel, maxProfit) = bookings
+      .groupBy(x => x.hotelName)
+      .map { (hotel, list) =>
+        val totalProfit = list.map(x => x.bookingPrice * x.profitMargin * x.noOfPeople).sum
+        (hotel, totalProfit)
+      }
+      .maxBy(_._2)
+
+    println(f"3. Most profitable hotel: $mostProfitableHotel (With a total profit of SGD ${maxProfit}%.2f)")
+
+    //spacing after questions
+    questionLineSpacing()
   else
     println("No data found.")
