@@ -131,7 +131,7 @@ object MainProgram:
         val bestDisc = bookings.maxBy(_.discount)
         val bestMargin = bookings.minBy(_.profitMargin)
 
-        println("2. Most Economical Hotel Options")
+        println("2. Most Economical Hotel")
 
         println(f"   (Single View) Lowest Price:  ${bestPrice.hotelName} (${bestPrice.destinationCountry} - ${bestPrice.city}) (SGD ${bestPrice.bookingPrice}%.2f)")
         println(f"   (Single View) Best Discount: ${bestDisc.hotelName} (${bestDisc.destinationCountry} - ${bestDisc.city}) (${bestDisc.discount * 100}%.0f%%)")
@@ -151,16 +151,44 @@ object MainProgram:
       questionLineSpacing()
 
       // Question 3
-      val (mostProfitable, maxProfit) = bookings
+      val profitStats = bookings
         .groupBy(b => (b.hotelName, b.destinationCountry, b.city))
         .map:
-           case ((name, country, city), list) =>
-             val totalProfit = list.map(b => b.bookingPrice * b.profitMargin * b.noOfPeople).sum
-             val hotelKey = f"$name ($country - $city)"
-             (hotelKey, totalProfit)
-        .maxBy(_._2)
+          case ((name, country, city), list) =>
+            val totalVisitors = list.map(_.noOfPeople).sum.toDouble
+            val avgMargin = list.map(_.profitMargin).sum / list.size.toDouble
 
-      println(f"3. Most Profitable Hotel: $mostProfitable (Total Profit: SGD $maxProfit%.2f)")
+            val hotelKey = f"$name ($country - $city)"
+            hotelKey -> (totalVisitors, avgMargin)
+
+      if profitStats.nonEmpty then
+        val allVisitors = profitStats.values.map(_._1).toSeq
+        val allMargins = profitStats.values.map(_._2).toSeq
+
+        val (minV, maxV) = (allVisitors.min, allVisitors.max)
+        val (minM, maxM) = (allMargins.min, allMargins.max)
+
+        val scoredProfitability = profitStats.map:
+          case (hotel, (visitors, margin)) =>
+            val visitorScore = minMaxNormalize(visitors, minV, maxV)
+
+            val marginScore = minMaxNormalize(margin, minM, maxM)
+
+            val finalScore = (visitorScore + marginScore) / 2.0
+            hotel -> finalScore
+
+        val (bestHotel, bestScore) = scoredProfitability.maxBy(_._2)
+
+        val (winVisitors, winMargin) = profitStats(bestHotel)
+
+        println(f"3. Most Profitable Hotel (by Score): $bestHotel")
+        println(f"   - Combined Score: $bestScore%.4f")
+        println(f"   - Total Visitors: ${winVisitors.toInt}")
+        println(f"   - Average Margin: $winMargin%.2f")
+
+      else
+        println("3. Most Profitable Hotel: No data.")
+
       questionLineSpacing()
 
     else
