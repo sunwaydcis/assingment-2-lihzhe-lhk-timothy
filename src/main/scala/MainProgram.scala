@@ -16,42 +16,35 @@ object MainProgram:
     val cols = line.split(",").map(_.trim)
 
     if cols.length < 24 then
-      Failure(InvalidDataException("Insufficient columns in CSV row"))
+      Failure(InvalidDataException("Insufficient columns"))
     else
-      val rawName = cols(16)
-      val rawCountry = cols(9)
-      val rawCity = cols(10)
+      def validate[T](opt: Option[T], err: String): Try[T] =
+        opt.toRight(InvalidDataException(err)).toTry
 
-      if rawName.isEmpty || rawCountry.isEmpty || rawCity.isEmpty then
-        Failure(InvalidDataException("Missing essential ID fields (Name/Country/City)"))
-      else
-        Try:
-          val rawPrice = cols(20)
-          val rawDiscount = cols(21)
-          val rawProfit = cols(23)
-          val rawPeople = cols(11)
+      for
+        _ <- if cols(16).nonEmpty && cols(9).nonEmpty && cols(10).nonEmpty
+        then Success(true)
+        else Failure(InvalidDataException("Missing ID fields"))
 
-          val price = parseDoubleSafe(rawPrice).filter(_ >= 0.0)
-            .getOrElse(throw InvalidDataException("Invalid Price"))
+        price <- validate(parseDoubleSafe(cols(20)).filter(_ >= 0.0), "Invalid Price")
 
-          val discount = parseDoubleSafe(rawDiscount).getOrElse(0.0) / 100.0
+        discount = parseDoubleSafe(cols(21)).getOrElse(0.0) / 100.0
 
-          val profit = parseDoubleSafe(rawProfit)
-            .getOrElse(throw InvalidDataException("Invalid Profit"))
+        profit <- validate(parseDoubleSafe(cols(23)), "Invalid Profit")
 
-          val people = Try(rawPeople.toInt).toOption
-            .getOrElse(throw InvalidDataException("Invalid Person Count"))
+        people <- validate(Try(cols(11).toInt).toOption, "Invalid Person Count")
 
-          HotelBooking(
-            bookingId = cols(0),
-            destinationCountry = rawCountry,
-            city = rawCity,
-            hotelName = rawName,
-            bookingPrice = price,
-            discount = discount,
-            profitMargin = profit,
-            noOfPeople = people
-          )
+      yield
+        HotelBooking(
+          bookingId = cols(0),
+          destinationCountry = cols(9),
+          city = cols(10),
+          hotelName = cols(16),
+          bookingPrice = price,
+          discount = discount,
+          profitMargin = profit,
+          noOfPeople = people
+        )
 
   def minMaxNormalize(value: Double, min: Double, max: Double): Double =
     if (max - min).abs < 1e-9 then 0.5 else (value - min) / (max - min)
@@ -127,17 +120,7 @@ object MainProgram:
 
         val (winnerName, winnerScore) = scored.maxBy(_._2)
 
-        val bestPrice = bookings.minBy(_.bookingPrice)
-        val bestDisc = bookings.maxBy(_.discount)
-        val bestMargin = bookings.minBy(_.profitMargin)
-
-        println("2. Most Economical Hotel")
-
-        println(f"   (Single View) Lowest Price:  ${bestPrice.hotelName} (${bestPrice.destinationCountry} - ${bestPrice.city}) (SGD ${bestPrice.bookingPrice}%.2f)")
-        println(f"   (Single View) Best Discount: ${bestDisc.hotelName} (${bestDisc.destinationCountry} - ${bestDisc.city}) (${bestDisc.discount * 100}%.0f%%)")
-        println(f"   (Single View) Low Margin:    ${bestMargin.hotelName} (${bestMargin.destinationCountry} - ${bestMargin.city}) (${bestMargin.profitMargin}%.2f)")
-        println()
-        println(f"   (Combined Score Winner): $winnerName (Score: $winnerScore%.4f)")
+        println(f"2. Most Economical Hotel (by Score): $winnerName (Score: $winnerScore%.4f)")
         println()
 
         val top3 = scored.toSeq.sortBy(-_._2).take(3)
