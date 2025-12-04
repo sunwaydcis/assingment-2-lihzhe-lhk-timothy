@@ -1,97 +1,167 @@
-import scala.io.Source
-//To use ISO codec instead of default utf8 for this specific csv
-import scala.io.Codec
-//import ProgramClasses.HotelBooking
-
-//Function to print lines in spaces between questions
-def questionLineSpacing(): Unit =
-  println("-" * 100)
-
-// Main Program Function
-@main def runMainProgram(): Unit =
-
-  //Read the csv file and record them into lists
-  // Load and parse the CSV file
-  val bookings: List[HotelBooking] =
-    try
-      //val source = Source.fromResource("Hotel_Dataset.csv")
-      val source = Source.fromResource("Hotel_Dataset.csv")(Codec("ISO-8859-1"))
-
-      //Read lines and save them as vals
-      val lines = source.getLines().drop(1).toList
-
-      //Close the source reading process for better memory management
-      source.close()
-
-      //Process the lines to return the mapped list values using hotel booking class's constructor
-      //Properly assign and use the constructor according to the column values in the csv file
-      lines.map { line =>
-        val cols = line.split(",")
-        // Note: Make sure your column indices match your CSV structure exactly
-        val bookingId = cols(0)
-        val destinationCountry = cols(9)
-        val hotelName = cols(16)
-        val bookingPrice = cols(20).toDouble
-        val discount = cols(21).replace("%", "").toDouble / 100
-        val profitMargin = cols(23).toDouble
-        val noOfPeople = cols(11).toInt
-
-        HotelBooking(bookingId, destinationCountry, hotelName, bookingPrice, discount, profitMargin, noOfPeople)
-      }
-    catch
-      //Catch any file reading errors using IOException
-      case _: java.io.IOException =>
-        println("Problem reading the file.")
-        List.empty[HotelBooking]
-      //Blanket catch for most other file access errors
-      case e: Exception =>
-        println(s"Error reading file: ${e.getMessage}")
-        List.empty[HotelBooking]
+import scala.io.{Source, Codec}
+import scala.util.{Try, Success, Failure, Using}
 
 
-  if bookings.nonEmpty then
-    //spacing before questions
-    questionLineSpacing()
-    // Question 1: Which country has the highest number of bookings?
-    val (topCountry, maxBookings) = bookings
-      .groupBy(x => x.destinationCountry)
-      .map { case (country, list) => (country, list.size) }
-      .maxBy(x => x._2)
-    //Extract the country name with the highest amount of bookings
+case class InvalidDataException(message: String) extends Exception(message)
 
-    println(s"1. Country with the highest number of bookings: $topCountry (With $maxBookings total bookings)")
+object MainProgram:
 
-    //spacing between questions
-    questionLineSpacing()
+  def questionLineSpacing(): Unit = println("-" * 100)
 
-    // Question 2
-    val bestPriceHotel = bookings.minBy(_.bookingPrice)
-    val (bestPriceHotelName, bestPriceHotelPrice) = (bestPriceHotel.hotelName, bestPriceHotel.bookingPrice)
-    val bestDiscountHotel = bookings.maxBy(_.discount)
-    val (bestDiscountHotelName, bestDiscountHotelDiscount) = (bestDiscountHotel.hotelName, bestDiscountHotel.discount)
-    val lowestMarginHotel = bookings.minBy(_.profitMargin)
-    val (lowestMarginHotelName, lowestMarginHotelMargin) = (lowestMarginHotel.hotelName, lowestMarginHotel.profitMargin)
+  private def parseDoubleSafe(s: String): Option[Double] =
+    val cleaned = s.replaceAll("[%$,]", "").trim
+    Try(cleaned.toDouble).toOption
 
-    println("2. Most Economical Hotel Options")
-    println(f"   a. Best Booking Price: $bestPriceHotelName (With a booking price of SGD ${bestPriceHotelPrice}%.2f)")
-    println(f"   b. Best Discount: $bestDiscountHotelName (With a discount of ${bestDiscountHotelDiscount * 100}%.0f percent)")
-    println(s"   c. Best Profit Margin (Lowest): $lowestMarginHotelName (With a margin of $lowestMarginHotelMargin)")
+  def parseLine(line: String): Try[HotelBooking] =
+    val cols = line.split(",").map(_.trim)
 
-    //spacing between questions
-    questionLineSpacing()
+    if cols.length < 24 then
+      Failure(InvalidDataException("Insufficient columns in CSV row"))
+    else
+      val rawName = cols(16)
+      val rawCountry = cols(9)
+      val rawCity = cols(10)
 
-    // Question 3
-    val (mostProfitableHotel, maxProfit) = bookings
-      .groupBy(x => x.hotelName)
-      .map { (hotel, list) =>
-        val totalProfit = list.map(x => x.bookingPrice * x.profitMargin * x.noOfPeople).sum
-        (hotel, totalProfit)
-      }
-      .maxBy(_._2)
+      if rawName.isEmpty || rawCountry.isEmpty || rawCity.isEmpty then
+        Failure(InvalidDataException("Missing essential ID fields (Name/Country/City)"))
+      else
+        Try:
+          val rawPrice = cols(20)
+          val rawDiscount = cols(21)
+          val rawProfit = cols(23)
+          val rawPeople = cols(11)
 
-    println(f"3. Most profitable hotel: $mostProfitableHotel (With a total profit of SGD ${maxProfit}%.2f)")
+          val price = parseDoubleSafe(rawPrice).filter(_ >= 0.0)
+            .getOrElse(throw InvalidDataException("Invalid Price"))
 
-    //spacing after questions
-    questionLineSpacing()
-  else
-    println("No data found.")
+          val discount = parseDoubleSafe(rawDiscount).getOrElse(0.0) / 100.0
+
+          val profit = parseDoubleSafe(rawProfit)
+            .getOrElse(throw InvalidDataException("Invalid Profit"))
+
+          val people = Try(rawPeople.toInt).toOption
+            .getOrElse(throw InvalidDataException("Invalid Person Count"))
+
+          HotelBooking(
+            bookingId = cols(0),
+            destinationCountry = rawCountry,
+            city = rawCity,
+            hotelName = rawName,
+            bookingPrice = price,
+            discount = discount,
+            profitMargin = profit,
+            noOfPeople = people
+          )
+
+  def minMaxNormalize(value: Double, min: Double, max: Double): Double =
+    if (max - min).abs < 1e-9 then 0.5 else (value - min) / (max - min)
+
+  def main(args: Array[String]): Unit =
+    println("Reading data...")
+
+    val bookingsAttempt = Using(Source.fromInputStream(getClass.getResourceAsStream("/Hotel_Dataset.csv"))(Codec("ISO-8859-1"))): source =>
+      source.getLines().drop(1).map(parseLine)
+        .collect:
+           case Success(booking) => booking
+        .toList
+
+    val bookings: Seq[HotelBooking] = bookingsAttempt match
+      case Success(data) => data
+      case Failure(e) =>
+        println(s"CRITICAL ERROR: Could not read file. ${e.getMessage}")
+        List.empty
+
+    if bookings.nonEmpty then
+      println(s"Successfully loaded ${bookings.size} valid records.")
+      questionLineSpacing()
+
+      // Question 1
+      val (topCountry, maxBookings) = bookings
+        .groupBy(_.destinationCountry)
+        .map:
+           case (country, list) => (country, list.size)
+        .maxBy(_._2)
+
+      println(s"1. Country with highest bookings: $topCountry ($maxBookings bookings)")
+      questionLineSpacing()
+
+      // Question 2: Economy Score
+      val statsByHotel = bookings
+        .groupBy(b => (b.hotelName, b.destinationCountry, b.city))
+        .map:
+           case ((name, country, city), list) =>
+             val count = list.size.toDouble
+             val avgPrice = list.map(_.bookingPrice).sum / count
+             val avgDiscount = list.map(_.discount).sum / count
+             val avgProfit = list.map(_.profitMargin).sum / count
+
+             val hotelKey = f"$name ($country - $city)"
+             hotelKey -> (avgPrice, avgDiscount, avgProfit)
+
+      if statsByHotel.nonEmpty then
+        val avgPrices = statsByHotel.values.map(_._1).toSeq
+        val avgDiscounts = statsByHotel.values.map(_._2).toSeq
+        val avgProfits = statsByHotel.values.map(_._3).toSeq
+
+        val (minP, maxP) = (avgPrices.min, avgPrices.max)
+        val (minD, maxD) = (avgDiscounts.min, avgDiscounts.max)
+        val (minM, maxM) = (avgProfits.min, avgProfits.max)
+
+        val wPrice = 1.0
+        val wDiscount = 1.0
+        val wProfit = 1.0
+        val weightSum = wPrice + wDiscount + wProfit
+
+        val scored = statsByHotel.map:
+           case (hotel, (price, disc, margin)) =>
+             val normPrice = minMaxNormalize(price, minP, maxP)
+             val normDiscount = minMaxNormalize(disc, minD, maxD)
+             val normProfit = minMaxNormalize(margin, minM, maxM)
+
+             val priceScore = 1.0 - normPrice
+             val discountScore = normDiscount
+             val profitScore = 1.0 - normProfit
+
+             val combined = (priceScore * wPrice + discountScore * wDiscount + profitScore * wProfit) / weightSum
+             hotel -> combined
+
+        val (winnerName, winnerScore) = scored.maxBy(_._2)
+
+        val bestPrice = bookings.minBy(_.bookingPrice)
+        val bestDisc = bookings.maxBy(_.discount)
+        val bestMargin = bookings.minBy(_.profitMargin)
+
+        println("2. Most Economical Hotel Options")
+
+        println(f"   (Single View) Lowest Price:  ${bestPrice.hotelName} (${bestPrice.destinationCountry} - ${bestPrice.city}) (SGD ${bestPrice.bookingPrice}%.2f)")
+        println(f"   (Single View) Best Discount: ${bestDisc.hotelName} (${bestDisc.destinationCountry} - ${bestDisc.city}) (${bestDisc.discount * 100}%.0f%%)")
+        println(f"   (Single View) Low Margin:    ${bestMargin.hotelName} (${bestMargin.destinationCountry} - ${bestMargin.city}) (${bestMargin.profitMargin}%.2f)")
+        println()
+        println(f"   (Combined Score Winner): $winnerName (Score: $winnerScore%.4f)")
+        println()
+
+        val top3 = scored.toSeq.sortBy(-_._2).take(3)
+        println("   Top 3 by combined economy score:")
+        top3.foreach:
+           case (h, s) => println(f"     - $h (score: $s%.4f)")
+
+      else
+        println("2. Most Economical Hotel Options: no hotels to evaluate.")
+
+      questionLineSpacing()
+
+      // Question 3
+      val (mostProfitable, maxProfit) = bookings
+        .groupBy(b => (b.hotelName, b.destinationCountry, b.city))
+        .map:
+           case ((name, country, city), list) =>
+             val totalProfit = list.map(b => b.bookingPrice * b.profitMargin * b.noOfPeople).sum
+             val hotelKey = f"$name ($country - $city)"
+             (hotelKey, totalProfit)
+        .maxBy(_._2)
+
+      println(f"3. Most Profitable Hotel: $mostProfitable (Total Profit: SGD $maxProfit%.2f)")
+      questionLineSpacing()
+
+    else
+      println("No data found.")

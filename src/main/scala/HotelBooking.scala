@@ -1,8 +1,9 @@
 //package ProgramClasses
 
 case class HotelBooking(
-                         bookingId : String,
+                         bookingId: String,
                          destinationCountry: String,
+                         city: String,
                          hotelName: String,
                          bookingPrice: Double,
                          discount: Double,
