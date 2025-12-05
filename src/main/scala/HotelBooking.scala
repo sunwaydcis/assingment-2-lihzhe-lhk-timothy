@@ -1,4 +1,4 @@
-//package ProgramClasses
+// Case class to hold the parsed data
 
 case class HotelBooking(
                          bookingId: String,
