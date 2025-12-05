@@ -69,7 +69,7 @@ object MainProgram:
         .drop(1) // Skip CSV header
         .map(parseLine) // Parse every line
         .collect: // Filter
-          case Success(booking) => booking
+           case Success(booking) => booking
         .toList
 
     // Handle the result of the file read attempt
@@ -89,7 +89,7 @@ object MainProgram:
       val (topCountry, maxBookings) = bookings
         .groupBy(_.destinationCountry)
         .map:
-          case (country, list) => (country, list.size)
+           case (country, list) => (country, list.size)
         .maxBy(_._2)
 
       println(s"1. Country with highest bookings: $topCountry ($maxBookings bookings)")
@@ -102,14 +102,14 @@ object MainProgram:
       val statsByHotel = bookings
         .groupBy(b => (b.hotelName, b.destinationCountry, b.city))
         .map:
-          case ((name, country, city), list) =>
-            val count = list.size.toDouble
-            val avgPrice = list.map(_.bookingPrice).sum / count
-            val avgDiscount = list.map(_.discount).sum / count
-            val avgProfit = list.map(_.profitMargin).sum / count
+           case ((name, country, city), list) =>
+             val count = list.size.toDouble
+             val avgPrice = list.map(_.bookingPrice).sum / count
+             val avgDiscount = list.map(_.discount).sum / count
+             val avgProfit = list.map(_.profitMargin).sum / count
 
-            val hotelKey = f"$name ($country - $city)"
-            hotelKey -> (avgPrice, avgDiscount, avgProfit)
+             val hotelKey = f"$name ($country - $city)"
+             hotelKey -> (avgPrice, avgDiscount, avgProfit)
 
       if statsByHotel.nonEmpty then
         // Step 2: Find global min / max for normalization
@@ -129,18 +129,18 @@ object MainProgram:
 
         // Step 3: Calculate scores
         val scored = statsByHotel.map:
-          case (hotel, (price, disc, margin)) =>
-            val normPrice = minMaxNormalize(price, minP, maxP)
-            val normDiscount = minMaxNormalize(disc, minD, maxD)
-            val normProfit = minMaxNormalize(margin, minM, maxM)
+           case (hotel, (price, disc, margin)) =>
+             val normPrice = minMaxNormalize(price, minP, maxP)
+             val normDiscount = minMaxNormalize(disc, minD, maxD)
+             val normProfit = minMaxNormalize(margin, minM, maxM)
 
-            // Low Price and Margin are better, so we reverse (1.0 - norm). But high discount is better so keep it
-            val priceScore = 1.0 - normPrice
-            val discountScore = normDiscount
-            val profitScore = 1.0 - normProfit
+             // Low Price and Margin are better, so we reverse (1.0 - norm). But high discount is better so keep it
+             val priceScore = 1.0 - normPrice
+             val discountScore = normDiscount
+             val profitScore = 1.0 - normProfit
 
-            val combined = (priceScore * wPrice + discountScore * wDiscount + profitScore * wProfit) / weightSum
-            hotel -> combined
+             val combined = (priceScore * wPrice + discountScore * wDiscount + profitScore * wProfit) / weightSum
+             hotel -> combined
 
         // Find winner
         val (winnerName, winnerScore) = scored.maxBy(_._2)
@@ -152,7 +152,7 @@ object MainProgram:
         val top3 = scored.toSeq.sortBy(-_._2).take(3)
         println("   Top 3 by combined economy score:")
         top3.foreach:
-          case (h, s) => println(f"     - $h (score: $s%.4f)")
+           case (h, s) => println(f"     - $h (score: $s%.4f)")
 
       else
         println("2. Most Economical Hotel Options: no hotels to evaluate.")
