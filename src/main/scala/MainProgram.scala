@@ -34,15 +34,15 @@ object MainProgram:
 
       // Step 1: Convert sums to averages
       val statsByHotel = rawStats.map:
-         case (key, stats) =>
-           val count = stats.count.toDouble
-           val avgPrice = stats.sum1 / count
-           val avgDiscount = stats.sum2 / count
-           val avgProfit = stats.sum3 / count
+        case (key, stats) =>
+          val count = stats.count.toDouble
+          val avgPrice = stats.sum1 / count
+          val avgDiscount = stats.sum2 / count
+          val avgProfit = stats.sum3 / count
 
-           val (name, country, city) = key
-           val hotelKey = f"$name ($country - $city)"
-           hotelKey -> (avgPrice, avgDiscount, avgProfit)
+          val (name, country, city) = key
+          val hotelKey = f"$name ($country - $city)"
+          hotelKey -> (avgPrice, avgDiscount, avgProfit)
 
       if statsByHotel.nonEmpty then
         // Step 2: Find global min / max for normalization
@@ -101,13 +101,13 @@ object MainProgram:
         (_ + _)
 
       val profitStats = rawProfitStats.map:
-         case (key, stats) =>
-            val totalVisitors = stats.sum1 // Sum
-            val avgMargin = stats.sum2 / stats.count.toDouble // Average
+        case (key, stats) =>
+          val totalVisitors = stats.sum1 // Sum
+          val avgMargin = stats.sum2 / stats.count.toDouble // Average
 
-            val (name, country, city) = key
-            val hotelKey = f"$name ($country - $city)"
-            hotelKey -> (totalVisitors, avgMargin)
+          val (name, country, city) = key
+          val hotelKey = f"$name ($country - $city)"
+          hotelKey -> (totalVisitors, avgMargin)
 
       if profitStats.nonEmpty then
         // Step 2: Global min / max
